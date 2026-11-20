@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Transit Hub</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="admin-body">
+
+    <!-- Admin Login Box -->
+    <div id="adminLoginContainer" class="admin-login-box" style="display: flex;">
+        <div class="login-card-box">
+            <h2>🛡️ Admin Secure Login</h2>
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px;">Login via Email or Phone Number</p>
+            <div class="form-group"><label>Email or Phone Number:</label><input type="text" id="adminEmailInput" placeholder="admin@transit.my or +601112215903"></div>
+            <div class="form-group"><label>Password:</label><input type="password" id="adminPassInput" placeholder="••••••••"></div>
+            <button onclick="handleAdminLogin()" class="transit-btn btn-register" style="width: 100%; margin-top: 18px; cursor: pointer;">Login</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
+                <a href="#" onclick="openAdminForgotModal()" style="font-size: 11px; color: #38bdf8; text-decoration: none;">Forgot Password?</a>
+                <a href="index.html" style="font-size: 11px; color: var(--text-muted); text-decoration: none;">← Back to App</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Forgot Password Modal -->
+    <div id="adminForgotModal" class="modal">
+        <div class="modal-content glass-effect">
+            <span class="close" onclick="closeModal('adminForgotModal')">&times;</span>
+            <h3>Reset Admin Password</h3>
+            <div class="form-group"><label>Registered Email / Phone:</label><input type="text" id="forgotAdminId" placeholder="admin@transit.my"></div>
+            <button onclick="sendAdminOtp()" class="transit-btn btn-register" style="width:100%; margin-top:14px;">Send OTP</button>
+            <div id="adminOtpBox" style="display:none; margin-top:12px;">
+                <p id="adminOtpMsg" style="font-size:11px; color:#38bdf8;"></p>
+                <div class="form-group"><label>Enter OTP:</label><input type="text" id="enteredAdminOtp" maxlength="4"></div>
+                <div class="form-group"><label>New Password:</label><input type="password" id="newAdminPass" placeholder="New Password"></div>
+                <button onclick="verifyAndResetAdminPass()" class="transit-btn btn-reload" style="width:100%; margin-top:14px;">Update Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard Container -->
+    <div id="adminDashboardContainer" class="admin-container" style="display: none;">
+        <header class="admin-header">
+            <h2>🛡️ Transit Admin Control Panel</h2>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button onclick="exportBackup()" class="pdf-btn" style="padding: 8px 12px; font-weight: bold; cursor: pointer;">💾 Backup</button>
+                <button onclick="document.getElementById('restoreFile').click()" class="pdf-btn" style="padding: 8px 12px; font-weight: bold; cursor: pointer;">📂 Restore</button>
+                <button onclick="exportCardsToCSV()" class="pdf-btn" style="padding: 8px 12px; font-weight: bold; cursor: pointer;">📊 Export CSV</button>
+                <button onclick="adminLogout()" class="action-btn btn-block" style="padding: 8px 12px; background: #ef4444; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; border: none;">Logout</button>
+                <a href="index.html" class="btn-back">Back to App</a>
+            </div>
+        </header>
+
+        <div class="admin-stats-grid">
+            <div class="stat-card"><h3>Total Cards</h3><p id="adminTotalCards">0</p></div>
+            <div class="stat-card"><h3>Total System Balance</h3><p id="adminTotalBalance">RM 0.00</p></div>
+            <div class="stat-card"><h3>Blocked Cards</h3><p id="adminBlockedCards">0</p></div>
+            <div class="stat-card"><h3>Total Reloaded</h3><p id="adminTotalReloaded">RM 0.00</p></div>
+        </div>
+
+        <div class="search-bar-container" style="margin-bottom: 20px;">
+            <input type="text" id="adminSearchInput" onkeyup="filterAdminCards()" placeholder="🔍 Search by Card No, Holder Name, or Phone..." style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); font-size: 13px; box-sizing: border-box;">
+        </div>
+
+        <div class="admin-section" style="background: var(--input-bg); padding: 15px; border-radius: 14px; margin-bottom: 20px;">
+            <h3>System Balance Overview</h3>
+            <div class="chart-box"><canvas id="adminChart"></canvas></div>
+        </div>
+
+        <div class="admin-section">
+            <h3>Registered Cards & Customer Reports Database</h3>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Card Number</th>
+                            <th>Holder</th>
+                            <th>Phone</th>
+                            <th>Category</th>
+                            <th>Registration Date</th>
+                            <th>Status & Reports</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminCardTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <h3>System Audit Log</h3>
+            <ul id="adminAuditList" class="audit-list"><li>No system logs recorded.</li></ul>
+        </div>
+    </div>
+
+    <input type="file" id="restoreFile" accept="application/json" hidden onchange="restoreBackup(this)">
+
+    <!-- Card detail modal -->
+    <div id="cardDetailModal" class="modal">
+        <div class="modal-content glass-effect modal-wide">
+            <span class="close" onclick="closeModal('cardDetailModal')">&times;</span>
+            <h3 id="detailTitle">Card details</h3>
+            <div class="detail-grid" id="detailInfo"></div>
+
+            <div class="detail-section">
+                <h4>Adjust balance</h4>
+                <div class="adjust-row">
+                    <select id="adjustType"><option value="credit">Credit (+)</option><option value="debit">Debit (−)</option></select>
+                    <input type="number" id="adjustAmount" min="0.01" step="0.01" placeholder="Amount (RM)">
+                </div>
+                <div class="form-group"><input type="text" id="adjustReason" maxlength="80" placeholder="Reason (required), e.g. Failed top-up refund"></div>
+                <button onclick="adminAdjustBalance()" class="transit-btn btn-reload" style="width:100%; margin-top:10px;">Apply adjustment</button>
+            </div>
+
+            <div class="detail-section">
+                <h4>PIN</h4>
+                <button onclick="adminResetPin()" class="transit-btn btn-transfer" style="width:100%;">🔑 Reset PIN</button>
+                <div id="tempPinBox" class="pin-box" style="display:none;"></div>
+            </div>
+
+            <div class="detail-section">
+                <h4>Transaction history</h4>
+                <ul id="detailTxList" class="transaction-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    </body>
+</html>
