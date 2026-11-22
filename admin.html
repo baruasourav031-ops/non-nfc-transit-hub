@@ -3,104 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Transit Hub</title>
+    <meta name="theme-color" content="#070c1a">
+    <title>Admin Console | Transit Hub Malaysia</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Chart.js CDN -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon-192.png" type="image/png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
-<body class="admin-body">
+<body class="admin-page">
 
-    <!-- Admin Login Box -->
-    <div id="adminLoginContainer" class="admin-login-box" style="display: flex;">
-        <div class="login-card-box">
-            <h2>🛡️ Admin Secure Login</h2>
-            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px;">Login via Email or Phone Number</p>
-            <div class="form-group"><label>Email or Phone Number:</label><input type="text" id="adminEmailInput" placeholder="admin@transit.my or +601112215903"></div>
-            <div class="form-group"><label>Password:</label><input type="password" id="adminPassInput" placeholder="••••••••"></div>
-            <button onclick="handleAdminLogin()" class="transit-btn btn-register" style="width: 100%; margin-top: 18px; cursor: pointer;">Login</button>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
-                <a href="#" onclick="openAdminForgotModal()" style="font-size: 11px; color: #38bdf8; text-decoration: none;">Forgot Password?</a>
-                <a href="index.html" style="font-size: 11px; color: var(--text-muted); text-decoration: none;">← Back to App</a>
+    <div class="scene" id="scene" aria-hidden="true"></div>
+
+    <!-- ============ LOGIN ============ -->
+    <div id="adminLoginContainer" class="admin-login" style="display:none;">
+        <div class="side">
+            <a href="index.html" class="brand">
+                <span class="brand-mark"><svg class="ic"><use href="#i-train"/></svg></span>
+                <span class="brand-name">Transit Hub<small>Operations Console</small></span>
+            </a>
+            <div>
+                <h1>Run the network from one screen.</h1>
+                <p>Monitor every registered card, resolve balance disputes, suspend lost cards and keep a full audit trail.</p>
+                <div class="side-points">
+                    <div><span class="ico"><svg class="ic"><use href="#i-chart"/></svg></span>Live KPIs and charts</div>
+                    <div><span class="ico"><svg class="ic"><use href="#i-users"/></svg></span>Cardholder management</div>
+                    <div><span class="ico"><svg class="ic"><use href="#i-shield"/></svg></span>Audit log for every action</div>
+                </div>
             </div>
+            <p style="font-size:13px;">© <span class="yr">2026</span> Transit Hub Malaysia</p>
+        </div>
+
+        <div class="form-wrap">
+            <form class="login-card" onsubmit="event.preventDefault(); handleAdminLogin();">
+                <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:28px;">
+                    <button type="button" onclick="toggleTheme()" class="icon-btn" id="themeToggleBtn" aria-label="Toggle theme"><svg class="ic"><use href="#i-sun"/></svg></button>
+                </div>
+                <span class="eyebrow"><svg class="ic sm"><use href="#i-shield"/></svg>Authorised staff only</span>
+                <h2 style="margin-top:14px;">Sign in to the console</h2>
+                <p class="sub">Use your staff email or registered phone number.</p>
+                <div class="field">
+                    <label for="adminEmailInput">Email or phone</label>
+                    <div class="input-icon"><svg class="ic"><use href="#i-mail"/></svg><input type="text" id="adminEmailInput" autocomplete="username" placeholder="admin@transit.my"></div>
+                </div>
+                <div class="field">
+                    <label for="adminPassInput">Password</label>
+                    <div class="input-icon"><svg class="ic"><use href="#i-lock"/></svg><input type="password" id="adminPassInput" autocomplete="current-password" placeholder="••••••••"></div>
+                </div>
+                <div class="row-between">
+                    <label style="display:flex;gap:8px;align-items:center;color:var(--text-muted);"><input type="checkbox" id="showPass" onchange="adminPassInput.type=this.checked?'text':'password'"> Show password</label>
+                    <button type="button" class="link" onclick="openAdminForgotModal()">Forgot password?</button>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+                <div class="demo-creds">Demo login: <b>admin@transit.my</b> / <b>admin123</b></div>
+                <p style="margin-top:18px;font-size:13.5px;"><a class="link" href="index.html">← Back to cardholder portal</a></p>
+            </form>
         </div>
     </div>
 
-    <!-- Admin Forgot Password Modal -->
-    <div id="adminForgotModal" class="modal">
-        <div class="modal-content glass-effect">
+    <!-- Forgot password -->
+    <div id="adminForgotModal" class="modal" role="dialog" aria-modal="true">
+        <div class="modal-content">
             <span class="close" onclick="closeModal('adminForgotModal')">&times;</span>
-            <h3>Reset Admin Password</h3>
-            <div class="form-group"><label>Registered Email / Phone:</label><input type="text" id="forgotAdminId" placeholder="admin@transit.my"></div>
-            <button onclick="sendAdminOtp()" class="transit-btn btn-register" style="width:100%; margin-top:14px;">Send OTP</button>
-            <div id="adminOtpBox" style="display:none; margin-top:12px;">
-                <p id="adminOtpMsg" style="font-size:11px; color:#38bdf8;"></p>
-                <div class="form-group"><label>Enter OTP:</label><input type="text" id="enteredAdminOtp" maxlength="4"></div>
-                <div class="form-group"><label>New Password:</label><input type="password" id="newAdminPass" placeholder="New Password"></div>
-                <button onclick="verifyAndResetAdminPass()" class="transit-btn btn-reload" style="width:100%; margin-top:14px;">Update Password</button>
+            <h3>Reset admin password</h3>
+            <p class="modal-subtext">We'll send a one-time code to your registered email or phone.</p>
+            <div class="field"><label for="forgotAdminId">Email or phone</label><input type="text" id="forgotAdminId" placeholder="admin@transit.my"></div>
+            <button onclick="sendAdminOtp()" class="btn btn-ghost btn-block">Send code</button>
+            <div id="adminOtpBox" style="display:none;margin-top:16px;">
+                <div class="otp-box" id="adminOtpMsg"></div>
+                <div class="row-2">
+                    <div class="field"><label for="enteredAdminOtp">Code</label><input type="text" id="enteredAdminOtp" maxlength="4" inputmode="numeric" placeholder="1234"></div>
+                    <div class="field"><label for="newAdminPass">New password</label><input type="password" id="newAdminPass" placeholder="Min. 6 characters"></div>
+                </div>
+                <button onclick="verifyAndResetAdminPass()" class="btn btn-primary btn-block">Update password</button>
             </div>
         </div>
     </div>
 
-    <!-- Admin Dashboard Container -->
-    <div id="adminDashboardContainer" class="admin-container" style="display: none;">
-        <header class="admin-header">
-            <h2>🛡️ Transit Admin Control Panel</h2>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <button onclick="exportBackup()" class="pdf-btn" style="padding: 8px 12px; font-weight: bold; cursor: pointer;">💾 Backup</button>
-                <button onclick="document.getElementById('restoreFile').click()" class="pdf-btn" style="padding: 8px 12px; font-weight: bold; cursor: pointer;">📂 Restore</button>
-                <button onclick="exportCardsToCSV()" class="pdf-btn" style="padding: 8px 12px; font-weight: bold; cursor: pointer;">📊 Export CSV</button>
-                <button onclick="adminLogout()" class="action-btn btn-block" style="padding: 8px 12px; background: #ef4444; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; border: none;">Logout</button>
-                <a href="index.html" class="btn-back">Back to App</a>
+    <!-- ============ DASHBOARD ============ -->
+    <div id="adminDashboardContainer" class="admin-shell" style="display:none;">
+        <aside class="sidebar">
+            <a href="index.html" class="brand">
+                <span class="brand-mark"><svg class="ic"><use href="#i-train"/></svg></span>
+                <span class="brand-name">Transit Hub<small>Operations Console</small></span>
+            </a>
+            <a class="side-link active" href="#overview"><svg class="ic"><use href="#i-chart"/></svg>Overview</a>
+            <a class="side-link" href="#cards"><svg class="ic"><use href="#i-users"/></svg>Cardholders</a>
+            <a class="side-link" href="#audit"><svg class="ic"><use href="#i-list"/></svg>Audit log</a>
+            <a class="side-link" href="#tools"><svg class="ic"><use href="#i-settings"/></svg>Data tools</a>
+            <a class="side-link" href="index.html"><svg class="ic"><use href="#i-route"/></svg>Fare calculator</a>
+            <div class="spacer"></div>
+            <a class="side-link" href="#" onclick="event.preventDefault(); adminLogout();"><svg class="ic"><use href="#i-logout"/></svg>Sign out</a>
+        </aside>
+
+        <main class="admin-main">
+            <div class="admin-top" id="overview">
+                <div style="margin-right:auto;">
+                    <p class="muted" style="font-size:13px;" id="adminToday"></p>
+                    <h1>Network overview</h1>
+                </div>
+                <button onclick="toggleTheme()" class="icon-btn" id="themeToggleBtn2" aria-label="Toggle theme"><svg class="ic"><use href="#i-sun"/></svg></button>
+                <div class="who"><span class="avatar">AD</span>Administrator</div>
             </div>
-        </header>
 
-        <div class="admin-stats-grid">
-            <div class="stat-card"><h3>Total Cards</h3><p id="adminTotalCards">0</p></div>
-            <div class="stat-card"><h3>Total System Balance</h3><p id="adminTotalBalance">RM 0.00</p></div>
-            <div class="stat-card"><h3>Blocked Cards</h3><p id="adminBlockedCards">0</p></div>
-            <div class="stat-card"><h3>Total Reloaded</h3><p id="adminTotalReloaded">RM 0.00</p></div>
-        </div>
-
-        <div class="search-bar-container" style="margin-bottom: 20px;">
-            <input type="text" id="adminSearchInput" onkeyup="filterAdminCards()" placeholder="🔍 Search by Card No, Holder Name, or Phone..." style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); font-size: 13px; box-sizing: border-box;">
-        </div>
-
-        <div class="admin-section" style="background: var(--input-bg); padding: 15px; border-radius: 14px; margin-bottom: 20px;">
-            <h3>System Balance Overview</h3>
-            <div class="chart-box"><canvas id="adminChart"></canvas></div>
-        </div>
-
-        <div class="admin-section">
-            <h3>Registered Cards & Customer Reports Database</h3>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Card Number</th>
-                            <th>Holder</th>
-                            <th>Phone</th>
-                            <th>Category</th>
-                            <th>Registration Date</th>
-                            <th>Status & Reports</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="adminCardTableBody"></tbody>
-                </table>
+            <div class="kpis">
+                <div class="glass kpi k1"><span class="ico"><svg class="ic"><use href="#i-card"/></svg></span><div><span>Registered cards</span><p id="adminTotalCards">0</p></div></div>
+                <div class="glass kpi k2"><span class="ico"><svg class="ic"><use href="#i-wallet"/></svg></span><div><span>System balance</span><p id="adminTotalBalance">RM 0.00</p></div></div>
+                <div class="glass kpi k3"><span class="ico"><svg class="ic"><use href="#i-lock"/></svg></span><div><span>Blocked / lost</span><p id="adminBlockedCards">0</p></div></div>
+                <div class="glass kpi k4"><span class="ico"><svg class="ic"><use href="#i-plus"/></svg></span><div><span>Total reloaded</span><p id="adminTotalReloaded">RM 0.00</p></div></div>
             </div>
-        </div>
 
-        <div class="admin-section">
-            <h3>System Audit Log</h3>
-            <ul id="adminAuditList" class="audit-list"><li>No system logs recorded.</li></ul>
-        </div>
+            <div class="charts">
+                <div class="glass chart-card">
+                    <h3>Cards by category</h3>
+                    <p class="muted">Standard vs concession holders</p>
+                    <div class="chart-box"><canvas id="adminCatChart"></canvas></div>
+                </div>
+                <div class="glass chart-card">
+                    <h3>Transactions, last 7 days</h3>
+                    <p class="muted">Reloads, gate fares and transfers per day</p>
+                    <div class="chart-box"><canvas id="adminChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="glass table-card">
+                <h3>Busiest stations</h3>
+                <p class="muted" style="font-size:13px;margin-bottom:14px;">Entries and exits from gate taps across all cards</p>
+                <div id="stationStats" class="station-stats"></div>
+            </div>
+
+            <div class="glass table-card" id="cards">
+                <div class="table-head">
+                    <div>
+                        <h3>Cardholders</h3>
+                        <p class="muted" style="font-size:13px;" id="adminTableCount">0 cards</p>
+                    </div>
+                    <div class="table-tools">
+                        <div class="input-icon"><svg class="ic sm"><use href="#i-search"/></svg><input type="search" id="adminSearchInput" oninput="filterAdminCards()" class="input" style="padding-left:40px;" placeholder="Search card, name or phone"></div>
+                        <select id="adminStatusFilter" class="input" onchange="filterAdminCards()">
+                            <option value="all">All statuses</option>
+                            <option value="active">Active</option>
+                            <option value="blocked">Blocked</option>
+                            <option value="lost">Reported lost</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr><th>Cardholder</th><th>Card number</th><th>Category</th><th style="text-align:right;">Balance</th><th>Registered</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody id="adminCardTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="pager">
+                    <span id="pagerInfo"></span>
+                    <div class="btns">
+                        <button class="action-btn" id="pagePrev" onclick="changeAdminPage(-1)">Previous</button>
+                        <button class="action-btn" id="pageNext" onclick="changeAdminPage(1)">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts" style="grid-template-columns:1.4fr 1fr;">
+                <div class="glass table-card" id="audit" style="margin:0;">
+                    <h3 style="margin-bottom:14px;">Audit log</h3>
+                    <ul id="adminAuditList" class="audit-list"><li>No system logs recorded.</li></ul>
+                </div>
+                <div id="tools" style="display:grid;gap:16px;">
+                    <div class="glass tool"><span class="eyebrow"><svg class="ic sm"><use href="#i-download"/></svg>Backup</span><h3>Export full database</h3><p>Cards, transactions and audit log as JSON. Contains PINs: keep it private.</p><button onclick="exportBackup()" class="btn btn-ghost btn-block">Download backup</button></div>
+                    <div class="glass tool"><span class="eyebrow"><svg class="ic sm"><use href="#i-upload"/></svg>Restore</span><h3>Restore from backup</h3><p>Replaces all current data with a backup file.</p><button onclick="document.getElementById('restoreFile').click()" class="btn btn-ghost btn-block">Choose file</button></div>
+                    <div class="glass tool"><span class="eyebrow"><svg class="ic sm"><use href="#i-file"/></svg>Report</span><h3>Cardholder CSV</h3><p>Registry without PINs for offline reporting.</p><button onclick="exportCardsToCSV()" class="btn btn-ghost btn-block">Export CSV</button></div>
+                </div>
+            </div>
+        </main>
     </div>
 
     <input type="file" id="restoreFile" accept="application/json" hidden onchange="restoreBackup(this)">
 
-    <!-- Card detail modal -->
-    <div id="cardDetailModal" class="modal">
-        <div class="modal-content glass-effect modal-wide">
+    <!-- Card detail -->
+    <div id="cardDetailModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <div class="modal-content modal-wide">
             <span class="close" onclick="closeModal('cardDetailModal')">&times;</span>
             <h3 id="detailTitle">Card details</h3>
             <div class="detail-grid" id="detailInfo"></div>
@@ -108,26 +190,41 @@
             <div class="detail-section">
                 <h4>Adjust balance</h4>
                 <div class="adjust-row">
-                    <select id="adjustType"><option value="credit">Credit (+)</option><option value="debit">Debit (−)</option></select>
-                    <input type="number" id="adjustAmount" min="0.01" step="0.01" placeholder="Amount (RM)">
+                    <select id="adjustType" class="input"><option value="credit">Credit (+)</option><option value="debit">Debit (−)</option></select>
+                    <input type="number" id="adjustAmount" class="input" min="0.01" step="0.01" placeholder="Amount (RM)">
                 </div>
-                <div class="form-group"><input type="text" id="adjustReason" maxlength="80" placeholder="Reason (required), e.g. Failed top-up refund"></div>
-                <button onclick="adminAdjustBalance()" class="transit-btn btn-reload" style="width:100%; margin-top:10px;">Apply adjustment</button>
+                <input type="text" id="adjustReason" class="input" maxlength="80" placeholder="Reason (required), e.g. Failed top-up refund">
+                <button onclick="adminAdjustBalance()" class="btn btn-primary btn-block" style="margin-top:10px;">Apply adjustment</button>
             </div>
 
             <div class="detail-section">
-                <h4>PIN</h4>
-                <button onclick="adminResetPin()" class="transit-btn btn-transfer" style="width:100%;">🔑 Reset PIN</button>
+                <h4>Security</h4>
+                <div class="row-2">
+                    <button onclick="adminResetPin()" class="btn btn-ghost"><svg class="ic"><use href="#i-key"/></svg>Reset PIN</button>
+                    <button onclick="adminToggleBlock(detailCardNo)" class="btn btn-danger" id="detailBlockBtn"><svg class="ic"><use href="#i-lock"/></svg>Block card</button>
+                </div>
                 <div id="tempPinBox" class="pin-box" style="display:none;"></div>
             </div>
 
             <div class="detail-section">
                 <h4>Transaction history</h4>
-                <ul id="detailTxList" class="transaction-list"></ul>
+                <ul id="detailTxList" class="transaction-list" style="max-height:320px;"></ul>
             </div>
         </div>
     </div>
 
+    <div id="confirmModal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <div class="modal-content">
+            <h3 id="confirmTitle">Are you sure?</h3>
+            <p class="modal-subtext" id="confirmText" style="margin:8px 0 0;"></p>
+            <div class="confirm-actions">
+                <button class="btn btn-ghost" id="confirmNo">Cancel</button>
+                <button class="btn btn-primary" id="confirmYes">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="fares.js"></script>
     <script src="script.js"></script>
-    </body>
+</body>
 </html>

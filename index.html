@@ -3,270 +3,444 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Non-NFC Transit Hub - Pro Full-Stack</title>
+    <meta name="description" content="Manage your non-NFC Touch 'n Go and Rapid KL concession card online: reload, transfer, check fares across every LRT, MRT and Monorail station.">
+    <meta name="theme-color" content="#070c1a">
+    <title>Transit Hub Malaysia | Non-NFC Card Portal</title>
     <link rel="stylesheet" href="style.css">
-    <!-- jsPDF & QRCode.js Library -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Transit Hub">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
-    <!-- 🌟 SPLASH SCREEN -->
+    <!-- Splash -->
     <div id="splashScreen" class="splash-screen">
         <div class="splash-content">
-            <div class="transit-pulse-icon">🚇</div>
-            <h1 id="splashTitle">Transit Hub Pro</h1>
-            <p id="splashSub">Initializing Secure System...</p>
-            <div class="loading-bar">
-                <div class="loading-progress"></div>
-            </div>
-            <div class="train-track"><span class="train">🚆</span></div>
+            <div class="brand-mark"><svg class="ic lg"><use href="#i-train"/></svg></div>
+            <h1 id="splashTitle">Transit Hub</h1>
+            <p id="splashSub">Connecting to the Klang Valley network…</p>
+            <div class="loading-bar"><div class="loading-progress"></div></div>
         </div>
     </div>
 
-    <!-- MAIN APP CONTAINER -->
-    <div class="app-container">
-        <header>
-            <div class="logo-area">
-                <span class="status-dot"></span>
-                <h2 id="appTitle" class="app-title">Transit Hub</h2>
-            </div>
-            <div class="header-actions">
-                <button onclick="toggleTheme()" class="icon-btn" id="themeToggleBtn" title="Toggle Theme">☀️</button>
-                <select id="langSelect" onchange="changeLanguage(this.value)" class="lang-select">
-                    <option value="en">EN</option>
-                    <option value="ms">BM</option>
-                    <option value="bn">বাংলা</option>
-                </select>
-                <a href="admin.html" class="admin-link" target="_blank" id="adminPanelText">Admin</a>
-            </div>
-        </header>
+    <!-- Animated background (filled by script.js) -->
+    <div class="scene" id="scene" aria-hidden="true"></div>
 
-        <!-- 🔐 PRE-LOGIN VIEW -->
-        <div id="authLandingView" class="auth-landing-box">
-            <div class="portal-icon">🎫</div>
-            <h3 id="landingTitle">Secure Transit Portal</h3>
-            <p id="landingSub">Register your physical card or log in securely.</p>
-            <div class="transit-btn-grid" style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
-                <button onclick="openRegisterModal()" class="transit-btn btn-register" id="regBtn">➕ Register Card</button>
-                <button onclick="openLoginModal()" class="transit-btn btn-login" id="loginBtn">🔐 Card Login</button>
-            </div>
+    <!-- Top bar -->
+    <header class="topbar">
+        <a href="#top" class="brand">
+            <span class="brand-mark"><svg class="ic"><use href="#i-train"/></svg></span>
+            <span class="brand-name"><span id="appTitle">Transit Hub</span><small>Malaysia · Non-NFC Portal</small></span>
+        </a>
+        <nav class="nav-links" aria-label="Main">
+            <a href="#portal" id="navPortal">My Card</a>
+            <a href="#fares" id="navFares">Fare Calculator</a>
+            <a href="#features" id="navFeatures">Features</a>
+            <a href="admin.html" id="adminPanelText">Admin</a>
+        </nav>
+        <div class="tools">
+            <button class="btn btn-ghost btn-sm" id="installBtn" hidden onclick="installApp()"><svg class="ic sm"><use href="#i-phone"/></svg><span id="installBtnText">Install app</span></button>
+            <select id="langSelect" class="lang-select" onchange="changeLanguage(this.value)" aria-label="Language">
+                <option value="en">EN</option>
+                <option value="ms">BM</option>
+                <option value="bn">বাংলা</option>
+            </select>
+            <button onclick="toggleTheme()" class="icon-btn" id="themeToggleBtn" title="Toggle theme" aria-label="Toggle theme"><svg class="ic"><use href="#i-sun"/></svg></button>
         </div>
+    </header>
 
-        <!-- 🔓 POST-LOGIN DASHBOARD VIEW -->
-        <div id="userDashboard" class="user-dashboard" style="display: none;">
-            
-            <!-- GLASSSMORPHIC CARD PREVIEW WITH QR CODE -->
-            <div class="transit-card-preview">
-                <div class="card-top-row">
-                    <span class="transit-badge" id="cardTypeLabel">Standard Card</span>
-                    <div id="cardStatusBadge" class="status-pill active"><span id="statusIcon">⚡</span> <span id="statusText">Active</span></div>
+    <main id="top">
+        <div id="portal"></div>
+
+        <!-- ============ LANDING / AUTH ============ -->
+        <section id="authLandingView" class="container hero">
+            <div>
+                <span class="eyebrow"><span class="dot"></span><span id="heroEyebrow">Live simulator · Klang Valley rail</span></span>
+                <h1><span id="landingTitle">Your physical card,</span> <span class="grad" id="landingTitle2">now fully online.</span></h1>
+                <p class="hero-sub" id="landingSub">Register your non-NFC Touch 'n Go or concession card to reload, transfer balance, tap through gates and download receipts without queueing at a kiosk.</p>
+                <div class="hero-cta">
+                    <button class="btn btn-primary" onclick="showAuthTab('register')"><svg class="ic"><use href="#i-plus"/></svg><span id="regBtn">Register card</span></button>
+                    <a class="btn btn-ghost" href="#fares"><svg class="ic"><use href="#i-route"/></svg><span id="ctaFare">Check a fare</span></a>
                 </div>
-                
-                <div class="card-body-flex">
-                    <div>
-                        <div class="card-chip"></div>
-                        <h3 class="card-network">TNG / Rapid KL</h3>
-                        <p class="card-details"><span id="cardNoLabel">Card No</span>: <span id="cardNoSpan">---</span><br><span id="holderLabel">Holder</span>: <span id="cardNameSpan">---</span></p>
+                <div class="hero-stats">
+                    <div><b id="statStations">134</b><span id="statStationsLbl">stations covered</span></div>
+                    <div><b>6</b><span id="statLinesLbl">LRT, MRT &amp; Monorail lines</span></div>
+                    <div><b>50%</b><span id="statConcLbl">concession discount</span></div>
+                </div>
+                <div class="line-dots" id="heroLines"></div>
+            </div>
+
+            <div class="glass auth-card" id="authCard">
+                <div class="tabs" role="tablist">
+                    <button class="tab active" id="tabLogin" role="tab" onclick="showAuthTab('login')"><span id="loginBtn">Sign in</span></button>
+                    <button class="tab" id="tabRegister" role="tab" onclick="showAuthTab('register')"><span id="regTabText">Register</span></button>
+                </div>
+
+                <form id="loginPane" onsubmit="event.preventDefault(); submitLogin();">
+                    <h3 id="modalLoginTitle">Welcome back</h3>
+                    <p class="sub" id="loginSubText">Sign in with your card number and 4-digit PIN.</p>
+                    <div class="field">
+                        <label for="loginCardNo" id="lblLoginCardNo">Card number</label>
+                        <div class="input-icon"><svg class="ic"><use href="#i-card"/></svg><input type="text" id="loginCardNo" autocomplete="username" placeholder="e.g. 3800-1234-5678"></div>
                     </div>
-                    <!-- QR Code Container -->
-                    <div id="cardQrCode" class="qr-code-box" title="Gate Entry QR Code"></div>
+                    <div class="field">
+                        <label for="loginPin" id="lblLoginPin">4-digit PIN</label>
+                        <div class="input-icon"><svg class="ic"><use href="#i-lock"/></svg><input type="password" id="loginPin" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="••••"></div>
+                    </div>
+                    <div style="display:flex;justify-content:flex-end;margin:-4px 0 14px;"><button type="button" class="link" onclick="openForgotPinModal()" id="forgotPinLink">Forgot PIN?</button></div>
+                    <button type="submit" class="btn btn-primary btn-block" id="btnLoginSubmit">Sign in</button>
+                    <p class="secure-note"><svg class="ic sm"><use href="#i-shield"/></svg><span id="secureNote">Your data stays in this browser.</span></p>
+                </form>
+
+                <form id="registerPane" hidden onsubmit="event.preventDefault(); submitRegistration();">
+                    <h3 id="modalRegTitle">Register your card</h3>
+                    <p class="sub" id="regSubText">Link a physical card in under a minute.</p>
+                    <div class="field">
+                        <label for="regCardNo" id="lblCardNo">Card number (printed on the back)</label>
+                        <div class="input-icon"><svg class="ic"><use href="#i-card"/></svg><input type="text" id="regCardNo" placeholder="e.g. 3800-1234-5678"></div>
+                    </div>
+                    <div class="field"><label for="regHolder" id="lblHolder">Holder name</label><input type="text" id="regHolder" autocomplete="name" placeholder="Full name"></div>
+                    <div class="row-2">
+                        <div class="field"><label for="regPhone" id="lblPhone">Phone number</label><input type="tel" id="regPhone" autocomplete="tel" placeholder="+60123456789"></div>
+                        <div class="field"><label for="regPin" id="lblPin">4-digit PIN</label><input type="password" id="regPin" inputmode="numeric" maxlength="4" placeholder="••••"></div>
+                    </div>
+                    <div class="field"><label for="regCategory" id="lblCategory">Category / concession</label>
+                        <select id="regCategory">
+                            <option value="Standard Non-NFC Card">Standard (General)</option>
+                            <option value="Student Concession (School)">Student: Primary &amp; Secondary</option>
+                            <option value="Student Concession (University)">Student: Higher Education</option>
+                            <option value="OKU Concession Card">OKU (Persons with Disabilities)</option>
+                            <option value="Senior Citizen Concession">Senior Citizen (60+)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" id="btnNextOtp">Continue to verification</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ============ DASHBOARD ============ -->
+        <section id="userDashboard" class="container dash" style="display:none;">
+            <div class="dash-head">
+                <div>
+                    <p class="muted" id="dashGreeting">Good day</p>
+                    <h2 id="dashName">My card</h2>
                 </div>
-                
-                <div class="balance-display-box">
-                    <small class="balance-label" id="balanceLabelText">Balance</small>
-                    <h1 id="cardBalance" class="balance-amount">RM 0.00</h1>
+                <button onclick="logoutCard()" class="btn btn-ghost"><svg class="ic"><use href="#i-logout"/></svg><span id="logoutBtnText">Sign out / switch card</span></button>
+            </div>
+
+            <div id="dashBanners" class="banners"></div>
+
+            <div class="dash-grid">
+                <div>
+                    <div class="transit-card-preview" id="virtualCard">
+                        <div class="card-top">
+                            <div>
+                                <div class="card-network">TNG · RAPID KL</div>
+                                <span class="transit-badge" id="cardTypeLabel">Standard</span>
+                                <div class="card-tags"><span class="transit-badge pass" id="passBadge" hidden>PASS</span><span class="transit-badge" id="autoTag" hidden>AUTO RELOAD</span></div>
+                            </div>
+                            <div id="cardStatusBadge" class="status-pill active"><span id="statusText">Active</span></div>
+                        </div>
+                        <div class="card-top" style="align-items:center;">
+                            <div class="card-chip"></div>
+                            <div id="cardQrCode" class="qr-code-box" title="Gate QR"></div>
+                        </div>
+                        <div class="card-bottom">
+                            <div>
+                                <div class="card-number" id="cardNoSpan">----</div>
+                                <div class="card-holder" id="cardNameSpan">---</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div class="balance-label" id="balanceLabelText">Balance</div>
+                                <div id="cardBalance" class="balance-amount">RM 0.00</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button onclick="openReloadModal()" class="action reload transit-btn"><span class="ico"><svg class="ic"><use href="#i-plus"/></svg></span><span id="reloadActionBtn">Reload</span></button>
+                        <button onclick="openTransferModal()" class="action transfer transit-btn"><span class="ico"><svg class="ic"><use href="#i-transfer"/></svg></span><span id="transferActionBtn">Transfer</span></button>
+                        <button onclick="openGateTapModal()" class="action tap transit-btn"><span class="ico"><svg class="ic"><use href="#i-gate"/></svg></span><span id="gateTapActionBtn">Tap gate</span></button>
+                        <button onclick="openPassModal()" class="action pass transit-btn"><span class="ico"><svg class="ic"><use href="#i-ticket"/></svg></span><span id="passActionBtn">30-day pass</span></button>
+                        <button onclick="openAutoReloadModal()" class="action auto transit-btn"><span class="ico"><svg class="ic"><use href="#i-bolt"/></svg></span><span id="autoActionBtn">Auto reload</span></button>
+                        <button onclick="toggleCardBlockStatus()" class="action lost transit-btn"><span class="ico"><svg class="ic"><use href="#i-lock"/></svg></span><span id="blockCardBtn">Report lost</span></button>
+                    </div>
+
+                    <div class="stat-row">
+                        <div class="mini-stat"><span id="totalReloadedLabel">Total reloaded</span><b id="totalReloaded">RM 0.00</b></div>
+                        <div class="mini-stat"><span id="tripsLabel">Trips</span><b id="tripCount">0</b></div>
+                        <div class="mini-stat"><span id="spentLabel">Spent on fares</span><b id="fareSpent">RM 0.00</b></div>
+                    </div>
+
+                    <div class="glass panel" style="margin-top:18px;">
+                        <h3 id="contactTitleText">Need help?</h3>
+                        <p class="muted" style="font-size:13.5px;margin-top:4px;" id="contactSub">Our support team replies within one working day.</p>
+                        <div class="support">
+                            <a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://wa.me/601112215903?text=Hello%20Transit%20Hub%20Support,%20I%20need%20help%20with%20my%20account."><svg class="ic sm"><use href="#i-chat"/></svg>WhatsApp</a>
+                            <a class="btn btn-ghost btn-sm" href="mailto:support@transithub.my?subject=Support%20Inquiry%20-%20Transit%20Hub"><svg class="ic sm"><use href="#i-mail"/></svg>support@transithub.my</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:grid;gap:22px;">
+                <div class="glass panel">
+                    <div class="history-head" style="margin-bottom:4px;">
+                        <div><h3 id="monthTitle">This month</h3><p class="muted" style="font-size:13px;" id="monthSub">Spending on fares, last 6 months</p></div>
+                    </div>
+                    <div class="month-grid">
+                        <div class="month-stats" id="monthStats">
+                            <div><span id="mFareLbl">Fares</span><b id="mFare">RM 0.00</b></div>
+                            <div><span id="mReloadLbl">Reloads</span><b id="mReload">RM 0.00</b></div>
+                            <div><span id="mTripsLbl">Trips</span><b id="mTrips">0</b></div>
+                            <div class="saved"><span id="mSavedLbl">Concession saved</span><b id="mSaved">RM 0.00</b></div>
+                        </div>
+                        <div class="month-bars" id="monthBars"></div>
+                    </div>
+                </div>
+                <div class="glass panel">
+                    <div class="history-head">
+                        <h3 id="txHistoryTitle">Transaction history</h3>
+                        <button onclick="downloadPdfReceipt()" class="btn btn-ghost btn-sm"><svg class="ic sm"><use href="#i-download"/></svg><span id="pdfBtnText">PDF statement</span></button>
+                    </div>
+                    <div class="history-tools">
+                        <div class="input-icon"><svg class="ic sm"><use href="#i-search"/></svg><input type="search" id="txSearchInput" oninput="filterTransactions()" placeholder="Search transactions" class="input" style="padding-left:40px;"></div>
+                        <select id="txTypeFilter" onchange="filterTransactions()" class="input">
+                            <option value="all" id="optAll">All types</option>
+                            <option value="Reload" id="optReload">Reloads</option>
+                            <option value="Transfer" id="optTransfer">Transfers</option>
+                            <option value="Fare" id="optFare">Gate fares</option>
+                            <option value="Pass" id="optPass">Passes</option>
+                            <option value="Adjustment" id="optAdjust">Adjustments</option>
+                        </select>
+                    </div>
+                    <ul id="transactionList" class="transaction-list">
+                        <li class="no-data-item" id="noTxText">No transactions yet.</li>
+                    </ul>
+                </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ FARE CALCULATOR ============ -->
+        <section id="fares" class="container block">
+            <div class="section-head">
+                <div>
+                    <span class="eyebrow"><svg class="ic sm"><use href="#i-route"/></svg><span id="fcEyebrow">Fare calculator</span></span>
+                    <h2 style="margin-top:12px;" id="fcTitle">Any station to any station</h2>
+                    <p id="fcSub">Every LRT, MRT and Monorail station in the Klang Valley. Pick a start and end point to see the fare, route, changes and travel time.</p>
                 </div>
             </div>
 
-            <!-- ACTION BUTTONS GRID -->
-            <div class="actions-grid-custom actions-grid-four">
-                <button onclick="openReloadModal()" class="transit-btn btn-action btn-reload" id="reloadActionBtn">💳 Reload</button>
-                <button onclick="openTransferModal()" class="transit-btn btn-action btn-transfer" id="transferActionBtn">💸 Transfer</button>
-                <button onclick="openGateTapModal()" class="transit-btn btn-action btn-tap" id="gateTapActionBtn">🚇 Tap Gate</button>
-                <button onclick="toggleCardBlockStatus()" class="transit-btn btn-action btn-block-card" id="blockCardBtn">🔒 Report Lost</button>
-            </div>
-
-            <!-- SUMMARY CARD -->
-            <div class="analytics-card glass-effect">
-                <div class="summary-text" style="width: 100%;">
-                    <h4 class="summary-title" id="summaryTitleText">📊 Account & Top-up Summary</h4>
-                    <span class="summary-value"><span id="totalReloadedLabel">Total Reloaded</span>: <b id="totalReloaded">RM 0.00</b></span>
-                </div>
-            </div>
-
-            <!-- 📞 CONTACT AUTHORITIES / SUPPORT CARD -->
-            <div class="analytics-card glass-effect" style="margin-bottom: 16px;">
-                <h4 class="summary-title" id="contactTitleText">📞 Contact Web App Authorities</h4>
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <a href="https://wa.me/601112215903?text=Hello%20Transit%20Hub%20Support,%20I%20need%20help%20with%20my%20account." target="_blank" class="transit-btn" style="flex:1; background:linear-gradient(135deg, #16a34a, #22c55e); font-size:11px; padding:10px; text-decoration:none; text-align:center;">💬 WhatsApp</a>
-                    <a href="mailto:support@transithub.my?subject=Support%20Inquiry%20-%20Transit%20Hub" class="transit-btn" style="flex:1; background:linear-gradient(135deg, #2563eb, #3b82f6); font-size:11px; padding:10px; text-decoration:none; text-align:center;">✉️ Email Us</a>
-                </div>
-            </div>
-
-            <!-- TRANSACTION HISTORY -->
-            <div class="history-section">
-                <div class="history-header-flex">
-                    <h3 class="history-title" id="txHistoryTitle">Transaction History</h3>
-                    <button onclick="downloadPdfReceipt()" class="pdf-btn" id="pdfBtnText">📥 PDF Statement</button>
-                </div>
-                
-                <div class="filter-controls">
-                    <input type="text" id="txSearchInput" onkeyup="filterTransactions()" placeholder="Search transactions..." class="tx-search-input">
-                    <select id="txTypeFilter" onchange="filterTransactions()" class="tx-filter-select">
-                        <option value="all" id="optAll">All Types</option>
-                        <option value="Reload" id="optReload">Reloads</option>
-                        <option value="Transfer" id="optTransfer">Transfers</option>
-                        <option value="Fare" id="optFare">Gate Fares</option>
-                    </select>
+            <div class="calc">
+                <div class="glass calc-form">
+                    <div id="savedRoutes" class="saved-routes" hidden>
+                        <label class="hint" id="savedRoutesLbl" style="font-weight:600;">Saved routes</label>
+                        <div id="savedRoutesList" class="fav-list"></div>
+                    </div>
+                    <div class="od">
+                        <div class="field">
+                            <label for="fcFrom"><span class="od-dot"></span> <span id="fcFromLbl">From</span></label>
+                            <select id="fcFrom" class="input"></select>
+                        </div>
+                        <button type="button" class="swap-btn" onclick="swapFareStations()" aria-label="Swap stations" title="Swap"><svg class="ic"><use href="#i-swap"/></svg></button>
+                        <div class="field">
+                            <label for="fcTo"><span class="od-dot end"></span> <span id="fcToLbl">To</span></label>
+                            <select id="fcTo" class="input"></select>
+                        </div>
+                    </div>
+                    <div class="field" style="margin-top:18px;">
+                        <label id="fcCatLbl">Passenger type</label>
+                        <div class="cat-pills" id="fcCat">
+                            <button type="button" class="cat-pill active" data-cat="Standard">Adult</button>
+                            <button type="button" class="cat-pill" data-cat="Student">Student</button>
+                            <button type="button" class="cat-pill" data-cat="Senior">Senior 60+</button>
+                            <button type="button" class="cat-pill" data-cat="OKU">OKU</button>
+                        </div>
+                    </div>
+                    <p class="hint" id="fcCatHint" style="margin-top:4px;">Students, seniors and OKU pay 50% with a registered concession card.</p>
+                    <div class="legend-lines" id="fcLegend"></div>
                 </div>
 
-                <ul id="transactionList" class="transaction-list">
-                    <li class="no-data-item" id="noTxText">No transactions yet.</li>
-                </ul>
+                <div class="glass calc-result" id="fcResult" aria-live="polite"></div>
             </div>
+        </section>
 
-            <!-- Logout Button -->
-            <button onclick="logoutCard()" class="transit-btn btn-logout" id="logoutBtnText">🚪 Logout / Switch Card</button>
+        <!-- ============ FEATURES ============ -->
+        <section id="features" class="container block" style="padding-top:0;">
+            <div class="section-head">
+                <div>
+                    <h2 id="featTitle">Everything a kiosk does, from your phone</h2>
+                    <p id="featSub">Built for students, seniors and OKU cardholders who rely on physical cards.</p>
+                </div>
+            </div>
+            <div class="features">
+                <div class="glass feature"><div class="ico"><svg class="ic"><use href="#i-plus"/></svg></div><h3 id="f1t">Instant reload</h3><p id="f1d">Top up with DuitNow QR, FPX online banking or a debit / credit card.</p></div>
+                <div class="glass feature"><div class="ico"><svg class="ic"><use href="#i-transfer"/></svg></div><h3 id="f2t">Card-to-card transfer</h3><p id="f2d">Parents can send balance straight to a child's student card.</p></div>
+                <div class="glass feature"><div class="ico"><svg class="ic"><use href="#i-percent"/></svg></div><h3 id="f3t">Concession fares</h3><p id="f3d">Student, senior and OKU cards are charged 50% automatically at the gate.</p></div>
+                <div class="glass feature"><div class="ico"><svg class="ic"><use href="#i-receipt"/></svg></div><h3 id="f4t">PDF receipts</h3><p id="f4d">Download a slip for any trip or a full statement for allowance claims.</p></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <span>© <span id="year">2026</span> Transit Hub Malaysia · <span id="footNote">A student simulator. Not affiliated with Prasarana, Rapid KL or Touch 'n Go.</span></span>
+            <span><a href="#fares">Fare calculator</a> · <a href="admin.html">Admin</a></span>
         </div>
-    </div>
+    </footer>
 
-    <!-- MODALS -->
-    <div id="registerModal" class="modal">
-        <div class="modal-content glass-effect">
-            <span class="close" onclick="closeModal('registerModal')">&times;</span>
-            <h3 id="modalRegTitle">Register Physical Card</h3>
-            <div class="form-group"><label id="lblCardNo">Card Number:</label><input type="text" id="regCardNo" placeholder="TNG-984210"></div>
-            <div class="form-group"><label id="lblHolder">Holder Name:</label><input type="text" id="regHolder" placeholder="Sourav Barua"></div>
-            <div class="form-group"><label id="lblPhone">Phone Number:</label><input type="text" id="regPhone" placeholder="+601112215903"></div>
-            <div class="form-group"><label id="lblPin">4-Digit PIN:</label><input type="password" id="regPin" maxlength="4" placeholder="****"></div>
-            <div class="form-group"><label id="lblCategory">Category / Concession:</label>
-                <select id="regCategory">
-                    <option value="Standard Non-NFC Card">Standard Non-NFC Card (General)</option>
-                    <option value="Student Concession (School)">Student Concession Card (Primary & Secondary)</option>
-                    <option value="Student Concession (University)">Student Concession Card (Higher Edu / University)</option>
-                    <option value="OKU Concession Card">OKU Concession Card (Persons with Disabilities)</option>
-                    <option value="Senior Citizen Concession">Senior Citizen Concession Card (Warga Emas 60+)</option>
-                </select>
-            </div>
-            <button onclick="submitRegistration()" class="transit-btn btn-register" id="btnNextOtp" style="width:100%; margin-top:16px;">Next (OTP)</button>
-        </div>
-    </div>
-
-    <div id="otpModal" class="modal">
-        <div class="modal-content glass-effect">
+    <!-- ============ MODALS ============ -->
+    <div id="otpModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalOtpTitle">
+        <div class="modal-content">
             <span class="close" onclick="closeModal('otpModal')">&times;</span>
-            <h3 id="modalOtpTitle">OTP Verification</h3>
-            <p id="otpMsg" style="font-size:12px; color:var(--text-muted); margin: 10px 0;"></p>
-            <div class="form-group"><label id="lblEnterOtp">Enter 4-Digit OTP:</label><input type="text" id="enteredOtp" maxlength="4" placeholder="1234"></div>
-            <button onclick="verifyOtpAndRegister()" class="transit-btn btn-reload" id="btnVerifyAct" style="width:100%; margin-top:16px;">Verify & Activate</button>
+            <h3 id="modalOtpTitle">Verify your phone</h3>
+            <p class="modal-subtext">We sent a 4-digit code by SMS.</p>
+            <div class="otp-box" id="otpMsg"></div>
+            <div class="field"><label for="enteredOtp" id="lblEnterOtp">Enter 4-digit code</label><input type="text" id="enteredOtp" inputmode="numeric" maxlength="4" placeholder="1234" class="mono" style="font-size:22px;letter-spacing:.4em;text-align:center;"></div>
+            <button onclick="verifyOtpAndRegister()" class="btn btn-primary btn-block" id="btnVerifyAct">Verify &amp; activate</button>
         </div>
     </div>
 
-    <div id="loginModal" class="modal">
-        <div class="modal-content glass-effect">
-            <span class="close" onclick="closeModal('loginModal')">&times;</span>
-            <h3 id="modalLoginTitle">Card Secure Login</h3>
-            <div class="form-group"><label id="lblLoginCardNo">Card Number:</label><input type="text" id="loginCardNo" placeholder="Enter card number"></div>
-            <div class="form-group"><label id="lblLoginPin">4-Digit PIN:</label><input type="password" id="loginPin" maxlength="4" placeholder="****"></div>
-            <button onclick="submitLogin()" class="transit-btn btn-register" id="btnLoginSubmit" style="width:100%; margin-top:16px;">Login</button>
-        </div>
-    </div>
-
-    <div id="reloadModal" class="modal">
-        <div class="modal-content glass-effect">
+    <div id="reloadModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalReloadTitle">
+        <div class="modal-content">
             <span class="close" onclick="closeModal('reloadModal')">&times;</span>
-            <h3 id="modalReloadTitle">Simulate Reload</h3>
-            <div class="form-group"><label id="lblGateway">Gateway:</label>
-                <select id="reloadGateway">
-                    <option value="DuitNow QR">DuitNow QR</option>
-                    <option value="FPX Online Banking">FPX Online Banking</option>
-                    <option value="Debit / Credit Card">Debit / Credit Card</option>
-                </select>
+            <h3 id="modalReloadTitle">Reload card</h3>
+            <p class="modal-subtext" id="reloadSub">Maximum card balance is RM 1,500.00.</p>
+            <div class="field"><label id="lblGateway">Payment method</label>
+                <div class="gateways">
+                    <label class="gateway"><input type="radio" name="gw" value="DuitNow QR" checked><span><svg class="ic"><use href="#i-qr"/></svg>DuitNow QR</span></label>
+                    <label class="gateway"><input type="radio" name="gw" value="FPX Online Banking"><span><svg class="ic"><use href="#i-bank"/></svg>FPX Banking</span></label>
+                    <label class="gateway"><input type="radio" name="gw" value="Debit / Credit Card"><span><svg class="ic"><use href="#i-card"/></svg>Debit / Credit</span></label>
+                </div>
+                <input type="hidden" id="reloadGateway" value="DuitNow QR">
             </div>
-            <div class="form-group"><label id="lblAmount">Amount (RM 10.00 - RM 100.00):</label>
+            <div class="field"><label id="lblAmount">Amount</label>
                 <div class="amount-chips">
                     <button type="button" class="amount-chip active" data-v="10">RM 10</button>
                     <button type="button" class="amount-chip" data-v="20">RM 20</button>
                     <button type="button" class="amount-chip" data-v="50">RM 50</button>
                     <button type="button" class="amount-chip" data-v="100">RM 100</button>
                 </div>
-                <select id="reloadAmount" hidden>
-                    <option value="10">RM 10.00</option>
-                    <option value="20">RM 20.00</option>
-                    <option value="50">RM 50.00</option>
-                    <option value="100">RM 100.00</option>
-                </select>
+                <input type="hidden" id="reloadAmount" value="10">
             </div>
-            <button onclick="submitReload()" class="transit-btn btn-reload" id="btnConfirmTopup" style="width:100%; margin-top:16px;">Confirm Top-Up</button>
+            <button onclick="submitReload()" class="btn btn-primary btn-block" id="btnConfirmTopup">Confirm top-up</button>
         </div>
     </div>
 
-    <div id="transferModal" class="modal">
-        <div class="modal-content glass-effect">
+    <div id="transferModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTransferTitle">
+        <div class="modal-content">
             <span class="close" onclick="closeModal('transferModal')">&times;</span>
-            <h3 id="modalTransferTitle">Card to Card Transfer</h3>
-            <div class="form-group"><label id="lblTargetCard">Recipient Card Number:</label><input type="text" id="transferTargetCard" placeholder="Enter recipient card No"></div>
-            <div class="form-group"><label id="lblTransferAmount">Transfer Amount (RM):</label><input type="number" id="transferAmount" placeholder="10.00" min="5" step="0.01"></div>
-            <button onclick="submitCardTransfer()" class="transit-btn btn-reload" id="btnTransferConfirm" style="width:100%; margin-top:16px;">Transfer Funds</button>
+            <h3 id="modalTransferTitle">Card-to-card transfer</h3>
+            <p class="modal-subtext" id="transferSub">Minimum RM 5.00. You'll confirm with your PIN.</p>
+            <div class="field"><label for="transferTargetCard" id="lblTargetCard">Recipient card number</label><input type="text" id="transferTargetCard" placeholder="Recipient card number"></div>
+            <div class="row-2">
+                <div class="field"><label for="transferAmount" id="lblTransferAmount">Amount (RM)</label><input type="number" id="transferAmount" placeholder="10.00" min="5" step="0.01"></div>
+                <div class="field"><label for="transferPin" id="lblTransferPin">Your PIN</label><input type="password" id="transferPin" inputmode="numeric" maxlength="4" placeholder="••••"></div>
+            </div>
+            <button onclick="submitCardTransfer()" class="btn btn-primary btn-block" id="btnTransferConfirm">Transfer funds</button>
         </div>
     </div>
 
-    <!-- 🚇 SIMULATE GATE TAP MODAL -->
-    <div id="gateTapModal" class="modal">
-        <div class="modal-content glass-effect">
+    <div id="gateTapModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+        <div class="modal-content">
             <span class="close" onclick="closeModal('gateTapModal')">&times;</span>
-            <h3>🚇 Simulate Rail Gate Tap</h3>
-            <p class="modal-subtext">Test entry/exit tap across Rapid KL LRT/MRT network.</p>
-
-            <div class="form-group">
-                <label>Origin Station:</label>
-                <select id="tapOrigin">
-                    <option value="Ampang Park">Ampang Park (Kelana Jaya Line)</option>
-                    <option value="Hang Tuah">Hang Tuah (Monorail / LRT)</option>
-                    <option value="KL Sentral">KL Sentral (Hub)</option>
-                    <option value="TRX">Tun Razak Exchange (MRT)</option>
-                </select>
+            <h3 id="gateTitle">Tap in at the gate</h3>
+            <div id="gateInPane">
+                <p class="modal-subtext" id="gateInSub">You need at least RM 1.00 to enter the paid area.</p>
+                <div class="gate-visual in"><span></span><span></span></div>
+                <div class="field"><label for="tapOrigin" id="lblTapFrom">Entry station</label><select id="tapOrigin"></select></div>
+                <button onclick="submitTapIn()" class="btn btn-primary btn-block"><svg class="ic"><use href="#i-gate"/></svg><span id="btnTapIn">Tap in</span></button>
             </div>
-
-            <div class="form-group">
-                <label>Destination Station:</label>
-                <select id="tapDestination">
-                    <option value="Cyberjaya Utara">Cyberjaya Utara (MRT Putrajaya Line)</option>
-                    <option value="Cyberjaya City Centre">Cyberjaya City Centre (MRT)</option>
-                    <option value="KLCC">KLCC (Kelana Jaya Line)</option>
-                    <option value="Bukit Bintang">Bukit Bintang (MRT / Monorail)</option>
-                </select>
-            </div>
-
-            <div class="fare-preview-box">
-                <div class="fare-row">
-                    <span>Standard Fare:</span>
-                    <b id="tapStandardFare">RM 4.80</b>
+            <div id="gateOutPane" hidden>
+                <p class="modal-subtext gate-entry" id="gateEntryInfo"></p>
+                <div class="field"><label for="tapDestination" id="lblTapTo">Exit station</label><select id="tapDestination"></select></div>
+                <div class="fare-preview-box">
+                    <div class="fare-row"><span id="lblStdFare">Standard fare</span><b id="tapStandardFare">RM 0.00</b></div>
+                    <div class="fare-row fare-discount"><span>You pay (<span id="tapConcessionRate">Standard rate</span>)</span><b id="tapFinalFare">RM 0.00</b></div>
+                    <div class="tap-route" id="tapRouteInfo"></div>
                 </div>
-                <div class="fare-row fare-discount">
-                    <span>Concession Fare (<span id="tapConcessionRate">50% Off</span>):</span>
-                    <b id="tapFinalFare">RM 2.40</b>
-                </div>
+                <button onclick="submitGateTap()" class="btn btn-primary btn-block" style="margin-top:16px;"><svg class="ic"><use href="#i-gate"/></svg><span id="btnTapPay">Tap out &amp; pay</span></button>
+                <p style="text-align:center;margin-top:12px;"><button type="button" class="link" style="color:var(--text-muted);font-weight:600;font-size:13px;" onclick="forgotTapOutTrip()" id="forgotTapOut">Forgot to tap out? Close this trip (penalty fare)</button></p>
             </div>
-
-            <button onclick="submitGateTap()" class="transit-btn btn-tap" style="width:100%; margin-top:16px;">⚡ Tap Gate & Pay</button>
         </div>
     </div>
 
-    <!-- 📄 TRANSACTION RECEIPT SLIP MODAL -->
-    <div id="txReceiptModal" class="modal">
-        <div class="modal-content glass-effect">
+    <div id="passModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="passTitle">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('passModal')">&times;</span>
+            <h3 id="passTitle">30-day unlimited rail pass</h3>
+            <p class="modal-subtext">Unlimited trips on every LRT, MRT and Monorail line for 30 days. Paid from your card balance.</p>
+            <div class="pass-ticket">
+                <div><span class="muted" style="font-size:12px;font-weight:700;">PRICE</span><b id="passPrice">RM 50.00</b><small id="passPriceNote">Standard price</small></div>
+                <svg class="ic lg"><use href="#i-ticket"/></svg>
+            </div>
+            <p class="hint" id="passStatus" style="margin:14px 0;"></p>
+            <button onclick="buyPass()" class="btn btn-primary btn-block" id="btnBuyPass">Buy pass</button>
+            <p class="hint" style="margin-top:10px;text-align:center;">Simulated pricing for this project.</p>
+        </div>
+    </div>
+
+    <div id="autoReloadModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="arTitle">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('autoReloadModal')">&times;</span>
+            <h3 id="arTitle">Auto reload</h3>
+            <p class="modal-subtext">Top up automatically so the gate never turns you away.</p>
+            <label class="switch-row"><span><b>Turn on auto reload</b><small class="muted">Charged to your linked payment method</small></span><input type="checkbox" id="arEnabled" class="switch"></label>
+            <div class="row-2" style="margin-top:14px;">
+                <div class="field"><label for="arThreshold">When balance is below</label>
+                    <select id="arThreshold"><option value="5">RM 5.00</option><option value="10">RM 10.00</option><option value="20">RM 20.00</option></select></div>
+                <div class="field"><label for="arAmount">Add</label>
+                    <select id="arAmount"><option value="10">RM 10.00</option><option value="20">RM 20.00</option><option value="50">RM 50.00</option></select></div>
+            </div>
+            <button onclick="saveAutoReload()" class="btn btn-primary btn-block">Save settings</button>
+        </div>
+    </div>
+
+    <div id="forgotPinModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="fpTitle">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('forgotPinModal')">&times;</span>
+            <h3 id="fpTitle">Reset your PIN</h3>
+            <p class="modal-subtext">Confirm your card and registered phone number, then we'll text you a code.</p>
+            <div class="field"><label for="fpCard">Card number</label><input type="text" id="fpCard" placeholder="Card number"></div>
+            <div class="field"><label for="fpPhone">Registered phone number</label><input type="tel" id="fpPhone" placeholder="+60123456789"></div>
+            <button onclick="sendPinResetCode()" class="btn btn-ghost btn-block">Send code</button>
+            <div id="fpStep2" hidden style="margin-top:16px;">
+                <div class="otp-box" id="fpOtpMsg"></div>
+                <div class="row-2">
+                    <div class="field"><label for="fpCode">Code</label><input type="text" id="fpCode" maxlength="4" inputmode="numeric" placeholder="1234"></div>
+                    <div class="field"><label for="fpNewPin">New 4-digit PIN</label><input type="password" id="fpNewPin" maxlength="4" inputmode="numeric" placeholder="••••"></div>
+                </div>
+                <button onclick="confirmPinReset()" class="btn btn-primary btn-block">Update PIN</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="txReceiptModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="receiptTitle">
+        <div class="modal-content">
             <span class="close" onclick="closeModal('txReceiptModal')">&times;</span>
-            <h3 style="text-align: center; margin-bottom: 4px;">🧾 Transaction Receipt</h3>
-            <p style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 0;">Transit Hub Malaysia Official Slip</p>
-
+            <h3 id="receiptTitle">Transaction receipt</h3>
+            <p class="modal-subtext">Transit Hub Malaysia · official slip</p>
             <div id="receiptSlipBody" class="receipt-slip-body"></div>
-
-            <button onclick="downloadSingleReceiptPdf()" class="transit-btn btn-register" style="width:100%; margin-top:16px;">📥 Download PDF Slip</button>
+            <button onclick="downloadSingleReceiptPdf()" class="btn btn-primary btn-block" style="margin-top:16px;"><svg class="ic"><use href="#i-download"/></svg>Download PDF slip</button>
         </div>
     </div>
 
+    <div id="confirmModal" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+        <div class="modal-content">
+            <h3 id="confirmTitle">Are you sure?</h3>
+            <p class="modal-subtext" id="confirmText" style="margin:8px 0 0;"></p>
+            <div class="confirm-actions">
+                <button class="btn btn-ghost" id="confirmNo">Cancel</button>
+                <button class="btn btn-primary" id="confirmYes">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="fares.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
