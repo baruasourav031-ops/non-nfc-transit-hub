@@ -276,11 +276,13 @@ function mountScene() {
     let out = "";
 
     // stars
+    out += `<g class="px" data-depth="0.03">`;
     for (let i = 0; i < 60; i++) out += `<circle class="star" cx="${(rnd() * W).toFixed(0)}" cy="${(rnd() * 260).toFixed(0)}" r="${(rnd() * 1.4 + .4).toFixed(1)}" style="animation-delay:${(rnd() * 4).toFixed(1)}s"/>`;
     // clouds
     [[120, 120, 1], [700, 70, .8], [1250, 150, 1.2]].forEach(([x, y, s], i) => {
         out += `<g class="cloud" style="animation-delay:-${i * 30}s"><g transform="translate(${x} ${y}) scale(${s})"><ellipse cx="0" cy="0" rx="70" ry="18"/><ellipse cx="35" cy="-12" rx="40" ry="18"/><ellipse cx="-30" cy="-8" rx="32" ry="14"/></g></g>`;
     });
+    out += `</g><g class="px" data-depth="0.12">`;
     // far skyline
     let x = -20;
     while (x < W) {
@@ -292,6 +294,7 @@ function mountScene() {
     // landmark-style tall towers (generic)
     out += `<path class="city-far" d="M1140 470V170l18-30 18 30v300zM1200 470V170l18-30 18 30v300zM1176 260h24v12h-24z"/>`;
     out += `<path class="city-far" d="M380 470V200h6v-60h4v60h6v270zM372 205h32l-6-14h-20z"/>`;
+    out += `</g><g class="px" data-depth="0.06">`;
     // near skyline with windows
     x = -10;
     while (x < W) {
@@ -305,6 +308,7 @@ function mountScene() {
         }
         x += w + 10 + rnd() * 30;
     }
+    out += `</g>`;
 
     const trainCar = (cx, stripe, front, back) => {
         let g = `<rect x="${cx}" y="0" width="196" height="44" rx="${front || back ? 14 : 6}" fill="#e9eef7"/>`;
@@ -1807,3 +1811,121 @@ function renderStationStats(cards) {
         <span class="st-bar"><i style="width:${n / max * 100}%;background:${lineColor(st)}"></i></span><b>${n}</b></div>`).join("")
         : `<p class="muted" style="font-size:14px;">No gate taps recorded yet.</p>`;
 }
+
+
+// =========================================================
+// SCROLL ANIMATIONS
+// Reveal-on-scroll, parallax city, progress bar, shrinking top bar,
+// and counters that count up when they come into view.
+// =========================================================
+(function scrollFx() {
+    const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // Progress bar along the top of the page
+    const bar = document.createElement("div");
+    bar.className = "scroll-progress";
+    document.body.appendChild(bar);
+
+    // What animates in, and how. Children of a group appear one after another.
+    const groups = [
+        [".hero > div:first-child > *", "up"],
+        [".auth-card", "right"],
+        [".section-head", "up"],
+        [".calc-form", "left"],
+        [".calc-result", "right"],
+        [".feature", "up"],
+        [".dash-head", "up"],
+        ["#virtualCard", "zoom"],
+        [".action", "up"],
+        [".mini-stat", "up"],
+        [".dash-grid .panel", "up"],
+        [".kpi", "up"],
+        [".chart-card", "up"],
+        [".table-card", "up"],
+        [".tool", "up"],
+        [".footer .container", "fade"]
+    ];
+
+    let io = null;
+    function tag() {
+        if (reduce || !("IntersectionObserver" in window)) return;
+        groups.forEach(([sel, kind]) => {
+            const seen = new Map();
+            document.querySelectorAll(sel).forEach(el => {
+                if (el.dataset.reveal) return;
+                const parent = el.parentElement;
+                const i = seen.get(parent) || 0;
+                seen.set(parent, i + 1);
+                el.dataset.reveal = kind;
+                el.style.setProperty("--d", Math.min(i, 8) * 70 + "ms");
+                io.observe(el);
+            });
+        });
+    }
+
+    if (!reduce && "IntersectionObserver" in window) {
+        io = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add("in");
+                    io.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+    }
+
+    // Count up numbers such as "134" and "50%" in the hero when they appear
+    function countUp(el) {
+        const m = el.textContent.trim().match(/^(\d+)(.*)$/);
+        if (!m || reduce) return;
+        const target = +m[1], suffix = m[2], t0 = performance.now();
+        (function step(now) {
+            const p = Math.min(1, (now - t0) / 1200);
+            el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))) + suffix;
+            if (p < 1) requestAnimationFrame(step);
+        })(t0);
+    }
+
+    // Parallax + progress + top bar, throttled to one update per frame
+    let ticking = false;
+    function onScroll() {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+            const y = window.scrollY;
+            const max = document.documentElement.scrollHeight - innerHeight;
+            bar.style.transform = `scaleX(${max > 0 ? y / max : 0})`;
+            const top = document.querySelector(".topbar");
+            if (top) top.classList.toggle("scrolled", y > 20);
+            if (!reduce) {
+                document.querySelectorAll(".scene .px").forEach(g => {
+                    g.style.transform = `translateY(${Math.min(y * parseFloat(g.dataset.depth), 160)}px)`;
+                });
+                const glow = document.querySelector(".scene .glow.g2");
+                if (glow) glow.style.transform = `translateY(${-y * 0.08}px)`;
+            }
+            ticking = false;
+        });
+    }
+
+    window.addEventListener("load", () => {
+        tag();
+        const stats = document.querySelectorAll(".hero-stats b");
+        if (stats.length && "IntersectionObserver" in window) {
+            const so = new IntersectionObserver(es => es.forEach(e => {
+                if (e.isIntersecting) { countUp(e.target); so.unobserve(e.target); }
+            }), { threshold: 0.6 });
+            stats.forEach(s => so.observe(s));
+        }
+        onScroll();
+    });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+
+    // Sections that appear later (dashboard after sign-in, admin after login) get tagged too
+    const mo = new MutationObserver(() => tag());
+    ["userDashboard", "authLandingView", "adminDashboardContainer", "adminLoginContainer"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) mo.observe(el, { attributes: true, attributeFilter: ["style"] });
+    });
+})();
